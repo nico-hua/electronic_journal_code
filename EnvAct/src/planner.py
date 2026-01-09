@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal, Union
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from langchain_community.chat_message_histories import ChatMessageHistory
@@ -29,7 +29,6 @@ class DeviceAction(BaseModel):
         )
     )
 
-
 class RoomPlan(BaseModel):
     room_name: str = Field(
         description="Name of the room where the actions will be executed, e.g., living_room, bedroom."
@@ -38,8 +37,38 @@ class RoomPlan(BaseModel):
         description="List of actions to be applied to devices within this room."
     )
 
+class Condition(BaseModel):
+    """
+    A single condition expression.
+
+    Example:
+      left="livingroom.temperature", op=">", right=30
+      left="context.temperature", op="<", right=25
+      left="time.hour", op="=", right=23
+    """
+    left: str = Field(
+        description="Left operand. e.g., 'livingroom.temperature', 'context.temperature', 'current_time'."
+    )
+    op: Literal[">", "<", "=", "!="] = Field(
+        description="Operator for the condition: one of '>', '<', '=', '!='."
+    )
+    right: Union[int, float, str, bool] = Field(
+        description="Right operand. Usually a number for env values, or string/bool if needed."
+    )
+
 
 class PlannerResponse(BaseModel):
+    type: Literal["tap", "instant"] = Field(
+        description="Indicates the type of plan. If 'tap', it's a TAP plan (waiting for conditions); if 'instant', it's an instant action."
+    )
+    conditions: List[Condition] = Field(
+        default_factory=list,
+        description=(
+            "List of conditions to trigger the plan. "
+            "If type='tap', ALL conditions should be satisfied before executing (AND semantics). "
+            "If type='instant', this list should be empty."
+        ),
+    )
     plan: List[RoomPlan] = Field(
         description="Overall execution plan, grouped by rooms and the corresponding device actions."
     )
@@ -65,7 +94,7 @@ Your task is to understand the user's instructions, call `get_room_info` to chec
 2. The user's current room location: {user_location}
 3. Outdoor environment information (context): {context}
 4. Names of all rooms in the home: {default_rooms}
-5. Device Actions
+5. Supported Device Actions
     - "turn_on" / "turn_off"
         Supported devices: "air_conditioner", "air_purifier", "bath_heater", "cooker_hood", "fan", "gas_stove", "heater", "humidifier", "light", "microwave_oven", "television", "towel_dryer", "washing_machine", "water_heater"
         Parameters: no parameters
@@ -91,47 +120,62 @@ Args:
 "response" MUST strictly follow the PlannerResponse schema:
 {format_instructions}
 3) reply_user
-Use this **only** when:
-    - The user instruction is completely unintelligible,
-    - Or it is impossible to infer a feasible action from available information.
+Use this ONLY when generating a feasible plan is impossible, including but not limited to:
+    - The user instruction is completely unintelligible (intent cannot be inferred).
+    - Required device is missing in the target room(s) and there is no reasonable substitute device.
+    - The requested goal is not achievable under the supported actions (e.g., asking for unsupported action_name).
+    - Device is explicitly reported as broken/faulty and there is no safe alternative plan.
+    - Required condition attribute is unavailable (e.g., user asks for CO2 but no CO2 sensor/field exists), and you cannot infer safely.
+When replying, clearly state the blocking reason and, if possible, provide actionable guidance (what to change / what information is missing).
 Args:
     "response": "a clear and concise message to the user"
 
-## Constraints
-1. **Clarification on ambiguous commands**:
-   - User instructions are often high-level and may lack specific details such as room or device information. To handle such cases:
-     1. **Prioritize using common sense, indoor and outdoor environment data, and available device information** to infer the user's intent.
-        - Example: If the user says "It’s too hot," assume they are requesting cooling in a room, especially when the temperature is high. Consider the room's typical usage, the outdoor temperature, and whether cooling devices like air conditioners or fans are available.
-     2. **Strive to fulfill the user's request as much as possible** using reasoning from the environment and device data. 
-        - **Do not ask the user for confirmation if the intent can be reasonably inferred**. Directly generate an execution plan with the required device actions.
-        - Example: If outdoor temperature is high, it is logical to turn on air conditioning rather than opening windows. Execute accordingly.
-     3. **Use `reply_user` only as a last resort**: if the user's intent cannot be determined even after applying common sense and environmental/device information.
-2. **Room Location Inference**:
-   - If the user's instruction clearly mentions a room (e.g., "Turn on the air_conditioner in the living room"), use that room as the target.
-   - If no room is explicitly mentioned:
-     - Use common sense, environmental/device info, and historical context to infer the target room.
-     - If the instruction implies a **global action** like "It's a storm, close the windows," the target room should be **all rooms**, and you should gather environment and device info for all rooms via `get_room_info`.
-     - If the instruction cannot be inferred, **default to the user's current room**.
-3. **Always call `get_room_info` first**: 
-   - Once the target room is identified, call `get_room_info` to gather the environment and device status before generating an execution plan.
-4. **Indoor vs Outdoor Environment Differences**:
-   - When adjusting temperature:
-     - **Outdoor hotter than indoor** → use cooling devices (AC, fan), as opening windows would bring in hot air.
-     - **Outdoor cooler than indoor** and difference > 5°C → consider opening windows if they are closed.
-     - **Windows already open and indoor still hot** → use cooling devices to lower temperature.
-5. **Energy efficiency and device compatibility**: 
-   - Prioritize achieving the user's intended result. Energy efficiency should only influence action selection **if multiple valid alternatives exist**.
-6. **Device state checks**:
-   - Skip actions if devices are already in the desired state (e.g., light already on).
-7. **Invalid or unavailable devices**:
-   - Provide feedback only if the device does not exist in the target room.
-8. **Device Associations and Conflicts**:
-   - **Associations**: Operate devices in sequence if needed. Example: Before turning on the air conditioner, ensure windows and doors are closed. Close them first if needed.
-   - **Conflicts**: Avoid simultaneous operation of conflicting devices. Example: Do not turn on a fan while the air conditioner is running unless explicitly requested.
+## Core Rules
+### A) Instant vs TAP (type + conditions) Classification
+Your output plan MUST set PlannerResponse.type as:
+- "instant": the user wants immediate execution now.
+- "tap": the user defines a trigger/condition; actions execute only when conditions become true.
+Classify as "tap" when the instruction contains conditional/trigger semantics such as:
+- “当/如果/只要/一旦 … 就 …”
+- “温度大于/小于/等于/不等于 … 时 …”
+- “到了某个时间/在某个时间段 …”
+- “每次/每当 … 发生时 …”
+- “保持/监测/超过阈值再执行 …”
+Classify as "instant" when the instruction is a direct imperative without waiting semantics, such as:
+- “打开/关闭/调到/把…设为…/现在/立刻/帮我…”
+### B) Condition Representation (for TAP)
+When type="tap":
+- PlannerResponse.conditions MUST be a non-empty list.
+- Each condition MUST be structured as: {{left, op, right}}
+- Supported ops: >, <, =, !=
+- Multiple conditions follow AND semantics (ALL must be true).
+Recommended left operand patterns:
+1) Room environment: "<room>.<metric>"
+   metric examples: temperature, humidity, brightness, noise, air_quality, uv_index
+   e.g., "livingroom.temperature"
+2) Outdoor/context: "context.<metric>"
+   e.g., "context.temperature"
+3) Time: only use "current_time"
+   - Compare current_time with a "HH:MM" string (24-hour).
+   - Example: left="current_time", op=">", right="18:00"
+When type="instant":
+- PlannerResponse.conditions MUST be an empty list [].
+### C) Execution Plan Feasibility & reply_user Boundary
+You must attempt to produce a feasible plan whenever possible:
+- If the requested device is missing, consider substitutes with similar effect (e.g., no AC -> fan; no fan -> open window when outdoor cooler).
+- If partial fulfillment is possible, output the best-effort plan and avoid reply_user.
+Use reply_user only when no safe, reasonable, and supported plan exists.
+### D) Room Target Inference
+- If a room is mentioned explicitly, treat it as target.
+- If no room is mentioned:
+  - If the instruction implies global action (e.g., “暴风雨把所有窗户关上”), target all rooms and call get_room_info for all rooms.
+  - Otherwise default to user's current room.
+### E) Always call get_room_info first
+Once target room(s) are determined, always call get_room_info to fetch current environment & device status BEFORE finishing a plan.
+### F) Device state checks
+Skip actions that are already in the desired state (e.g., light already on).
 
-## Response Format
-- If user's intent can be reasonably inferred: **directly generate execution plan**.
-- Only use `reply_user` if the intent is completely unclear.
+## Response Format (STRICT)
 Only respond in **valid JSON** that can be parsed by Python `json.loads` with the structure:
 {{
     "command": {{

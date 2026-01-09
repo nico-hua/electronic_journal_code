@@ -1,0 +1,449 @@
+{
+    "air_conditioner, set_temperature": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "air_conditioner",
+                    "field": "status",
+                    "target": "ON"
+                },
+                "action": {
+                    "device_type": "air_conditioner",
+                    "action_name": "turn_on"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "air_conditioner",
+            "field": "temperature",
+            "target": "parameters.temperature"
+        }
+    },
+    "air_conditioner, set_speed": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "air_conditioner",
+                    "field": "status",
+                    "target": "ON"
+                },
+                "action": {
+                    "device_type": "air_conditioner",
+                    "action_name": "turn_on"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "air_conditioner",
+            "field": "speed",
+            "target": "parameters.speed"
+        }
+    },
+    "air_conditioner, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "window",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "window",
+                    "action_name": "close"
+                }
+            },
+            {
+                "condition": {
+                    "device_type": "door",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "door",
+                    "action_name": "close"
+                }
+            },
+            {
+                "condition": {
+                    "device_type": "fan",
+                    "field": "status",
+                    "target": "OFF"
+                },
+                "action": {
+                    "device_type": "fan",
+                    "action_name": "turn_off"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "air_conditioner",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "heater, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "window",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "window",
+                    "action_name": "close"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "heater",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "window, close": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "window",
+            "field": "status",
+            "target": "CLOSED"
+        }
+    },
+    "window, open": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "window",
+            "field": "status",
+            "target": "OPEN"
+        }
+    },
+    "door, open": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "door",
+            "field": "status",
+            "target": "OPEN"
+        }
+    },
+    "door, close": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "door",
+            "field": "status",
+            "target": "CLOSED"
+        }
+    },
+    "fan, set_speed": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "fan",
+                    "field": "status",
+                    "target": "ON"
+                },
+                "action": {
+                    "device_type": "fan",
+                    "action_name": "turn_on"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "fan",
+            "field": "speed",
+            "target": "parameters.speed"
+        }
+    },
+    "fan, turn_off": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "fan",
+            "field": "status",
+            "target": "OFF"
+        }
+    },
+    "fan, turn_on": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "fan",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "curtain, open": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "curtain",
+            "field": "status",
+            "target": "OPEN"
+        }
+    },
+    "light, turn_off": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "light",
+            "field": "status",
+            "target": "OFF"
+        }
+    },
+    "light, turn_on": {
+        "pre_conditions": [],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "light",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "humidifier, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "window",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "window",
+                    "action_name": "close"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "humidifier",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "humidifier, turn_off": {
+        "pre_conditions": [
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "humidifier",
+            "field": "status",
+            "target": "OFF"
+        }
+    },
+    "air_purifier, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "window",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "window",
+                    "action_name": "close"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "air_purifier",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "air_purifier, turn_off": {
+        "pre_conditions": [
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "air_purifier",
+            "field": "status",
+            "target": "OFF"
+        }
+    },
+    "cooker_hood, set_speed": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "cooker_hood",
+                    "field": "status",
+                    "target": "ON"
+                },
+                "action": {
+                    "device_type": "cooker_hood",
+                    "action_name": "turn_on"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "cooker_hood",
+            "field": "temperature",
+            "target": "parameters.speed"
+        }
+    },
+    "cooker_hood, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "gas_stove",
+                    "field": "status",
+                    "target": "ON"
+                },
+                "action": {
+                    "device_type": "gas_stove",
+                    "action_name": "turn_on"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "cooker_hood",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "cooker_hood, turn_off": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "gas_stove",
+                    "field": "status",
+                    "target": "OFF"
+                },
+                "action": {
+                    "device_type": "gas_stove",
+                    "action_name": "turn_off"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "cooker_hood",
+            "field": "status",
+            "target": "OFF"
+        }
+    },
+    "gas_stove, turn_on": {
+        "pre_conditions": [
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "gas_stove",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "gas_stove, turn_off": {
+        "pre_conditions": [
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "gas_stove",
+            "field": "status",
+            "target": "OFF"
+        }
+    },
+    "water_heater, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "bath_heater",
+                    "field": "status",
+                    "target": "ON"
+                },
+                "action": {
+                    "device_type": "bath_heater",
+                    "action_name": "turn_on"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "water_heater",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "bath_heater, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "door",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "door",
+                    "action_name": "close"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "bath_heater",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "towel_dryer, turn_on": {
+        "pre_conditions": [
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "towel_dryer",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "television, turn_on": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "curtain",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "curtain",
+                    "action_name": "close"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "television",
+            "field": "status",
+            "target": "ON"
+        }
+    },
+    "curtain, close": {
+        "pre_conditions": [
+            {
+                "condition": {
+                    "device_type": "window",
+                    "field": "status",
+                    "target": "CLOSED"
+                },
+                "action": {
+                    "device_type": "window",
+                    "action_name": "close"
+                }
+            }
+        ],
+        "validation": {
+            "latency": 0.1,
+            "device_type": "curtain",
+            "field": "status",
+            "target": "CLOSED"
+        }
+    }
+}

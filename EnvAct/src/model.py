@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 
 llm = ChatOpenAI(
-    model="quen-plus",
+    model="qwen-plus",
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     api_key="sk-cc6863cc94ff4a8ca9055513bb381adb",
     temperature=0

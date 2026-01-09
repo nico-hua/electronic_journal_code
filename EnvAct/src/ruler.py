@@ -1,468 +1,11 @@
 from .planner import DeviceAction, RoomPlan
 from collections import defaultdict
 from .mysql import MySQL
-from .api import turn_off, turn_on, set_temperature, set_speed, open, close
+from .api import turn_off, turn_on, set_temperature, set_speed, open as api_open, close as api_close
 import threading
 import time
-
-rule_map = {
-    ("air_conditioner", "set_temperature"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "air_conditioner",
-                    "field": "status",
-                    "target": "ON",
-                },
-                "action": {
-                    "device_type": "air_conditioner",
-                    "action_name": "turn_on",
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "air_conditioner",
-            "field": "temperature",
-            "target": "parameters.temperature"
-        }
-    },
-    ("air_conditioner", "set_speed"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "air_conditioner",
-                    "field": "status",
-                    "target": "ON",
-                },
-                "action": {
-                    "device_type": "air_conditioner",
-                    "action_name": "turn_on",
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "air_conditioner",
-            "field": "speed",
-            "target": "parameters.speed"
-        }
-    },
-    ("air_conditioner", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "window",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "window",
-                    "action_name": "close"
-                }
-            },
-            {
-                "condition": {
-                    "device_type": "door",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "door",
-                    "action_name": "close"
-                }
-            },
-            {
-                "condition": {
-                    "device_type": "fan",
-                    "field": "status",
-                    "target": "OFF"
-                },
-                "action": {
-                    "device_type": "fan",
-                    "action_name": "turn_off"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "air_conditioner",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("heater", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "window",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "window",
-                    "action_name": "close"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "heater",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("window", "close"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "window",
-            "field": "status",
-            "target": "CLOSED"
-        }
-    },
-    ("window", "open"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "window",
-            "field": "status",
-            "target": "OPEN"
-        }
-    },
-    ("door", "open"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "door",
-            "field": "status",
-            "target": "OPEN"
-        }
-    },
-    ("door", "close"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "door",
-            "field": "status",
-            "target": "CLOSED"
-        }
-    },
-    ("fan", "set_speed"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "fan",
-                    "field": "status",
-                    "target": "ON",
-                },
-                "action": {
-                    "device_type": "fan",
-                    "action_name": "turn_on",
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "fan",
-            "field": "speed",
-            "target": "parameters.speed"
-        }
-    },
-    ("fan", "turn_off"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "fan",
-            "field": "status",
-            "target": "OFF"
-        }
-    },
-    ("fan", "turn_on"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "fan",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("curtain", "open"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "curtain",
-            "field": "status",
-            "target": "OPEN"
-        }
-    },
-    ("curtain", "close"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "curtain",
-            "field": "status",
-            "target": "CLOSED"
-        }
-    },
-    ("light", "turn_off"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "light",
-            "field": "status",
-            "target": "OFF"
-        }
-    },
-    ("light", "turn_on"): {
-        "pre_conditions": [],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "light",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("humidifier", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "window",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "window",
-                    "action_name": "close"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "humidifier",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("humidifier", "turn_off"): {
-        "pre_conditions": [
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "humidifier",
-            "field": "status",
-            "target": "OFF"
-        }
-    },
-    ("air_purifier", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "window",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "window",
-                    "action_name": "close"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "air_purifier",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("air_purifier", "turn_off"): {
-        "pre_conditions": [
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "air_purifier",
-            "field": "status",
-            "target": "OFF"
-        }
-    },
-    ("cooker_hood", "set_speed"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "cooker_hood",
-                    "field": "status",
-                    "target": "ON",
-                },
-                "action": {
-                    "device_type": "cooker_hood",
-                    "action_name": "turn_on",
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "cooker_hood",
-            "field": "temperature",
-            "target": "parameters.speed"
-        }
-    },
-    ("cooker_hood", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "gas_stove",
-                    "field": "status",
-                    "target": "ON"
-                },
-                "action": {
-                    "device_type": "gas_stove",
-                    "action_name": "turn_on"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "cooker_hood",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("cooker_hood", "turn_off"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "gas_stove",
-                    "field": "status",
-                    "target": "OFF"
-                },
-                "action": {
-                    "device_type": "gas_stove",
-                    "action_name": "turn_off"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "cooker_hood",
-            "field": "status",
-            "target": "OFF"
-        }
-    },
-    ("gas_stove", "turn_on"): {
-        "pre_conditions": [
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "gas_stove",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("gas_stove", "turn_off"): {
-        "pre_conditions": [
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "gas_stove",
-            "field": "status",
-            "target": "OFF"
-        }
-    },
-    ("water_heater", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "bath_heater",
-                    "field": "status",
-                    "target": "ON"
-                },
-                "action": {
-                    "device_type": "bath_heater",
-                    "action_name": "turn_on"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "water_heater",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("bath_heater", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "door",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "door",
-                    "action_name": "close"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "bath_heater",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("towel_dryer", "turn_on"): {
-        "pre_conditions": [
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "towel_dryer",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("television", "turn_on"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "curtain",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "curtain",
-                    "action_name": "close"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "television",
-            "field": "status",
-            "target": "ON"
-        }
-    },
-    ("curtain", "close"): {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "window",
-                    "field": "status",
-                    "target": "CLOSED"
-                },
-                "action": {
-                    "device_type": "window",
-                    "action_name": "close"
-                }
-            }
-        ],
-        "validation": {
-            "latency": 0.1,
-            "device_type": "curtain",
-            "field": "status",
-            "target": "CLOSED"
-        }
-    }
-}
+import json
+from pathlib import Path
 
 class Ruler:
     def __init__(self):
@@ -470,6 +13,26 @@ class Ruler:
         self.indegree = defaultdict(int)
         self.lock = threading.Lock()
         self.exec_log = []
+        self.rule_map = self.load_rule_map("rule_map.json")
+
+    def load_rule_map(self, filename):
+        try:
+            path = Path(__file__).resolve().parent / filename
+            with open(path, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            rule_map = {}
+            for k, v in raw.items():
+                parts = [p.strip() for p in k.split(",")]
+                if len(parts) != 2 or not parts[0] or not parts[1]:
+                    raise ValueError(f"Invalid rule_map key: {k!r}, expected 'device_type, action_name'")
+                rule_map[(parts[0], parts[1])] = v
+            return rule_map
+        except FileNotFoundError:
+            print(f"{filename} does not exist")
+            return {}
+        except json.JSONDecodeError:
+            print(f"{filename} is not a valid JSON file")
+            return {}
 
     def build_execution_plan(self, room_plan: RoomPlan):
         self.room = room_plan.room_name
@@ -482,7 +45,7 @@ class Ruler:
         if device_action_str in self.graph:
             return
         action_key = (device_action.device_type, device_action.action_name)
-        pre_conditions = rule_map[action_key].get("pre_conditions", [])
+        pre_conditions = self.rule_map[action_key].get("pre_conditions", [])
         # 前置条件为空，说明没有依赖
         if not pre_conditions:
             self.graph[device_action_str] = []
@@ -555,9 +118,9 @@ class Ruler:
         elif action_name == "turn_off":
             api_message = turn_off(device_type, self.room)
         elif action_name == "open":
-            api_message = open(device_type, self.room)
+            api_message = api_open(device_type, self.room)
         elif action_name == "close":
-            api_message = close(device_type, self.room)
+            api_message = api_close(device_type, self.room)
         elif action_name == "set_temperature":
             api_message = set_temperature(device_type, self.room, int(parameters.get("temperature")))
         elif action_name == "set_speed":
@@ -580,7 +143,7 @@ class Ruler:
             return
         # 2) Validate the device state after a configured latency
         action_key = (device_type, action_name)
-        validation = rule_map.get(action_key, {}).get("validation", {}) or {}
+        validation = self.rule_map.get(action_key, {}).get("validation", {}) or {}
         latency = float(validation.get("latency", 0.1))
         field = validation.get("field", "status")
         target_value = validation.get("target")
