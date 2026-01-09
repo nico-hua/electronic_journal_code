@@ -1,0 +1,24 @@
+[
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "current_time",
+        "op": ">=",
+        "right": "16:30"
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  }
+]
