@@ -35,27 +35,82 @@ class Ruler:
             return {}
 
     def build_execution_plan(self, room_plan: RoomPlan):
+        """
+        构建执行性计划
+        """
         self.room = room_plan.room_name
-        for action in room_plan.actions:
+        self.actions = room_plan.actions
+        # 检查环境条件
+        self.check_environment_conditions()
+        for action in self.actions:
             self.build_dependency(action) 
 
+    def check_environment_conditions(self):
+        """
+        检查环境条件
+        """
+        actions_to_remove = []
+        # 遍历所有动作，检查它们的环境条件是否满足
+        for action in self.actions:
+            action_key = (action.device_type, action.action_name)
+            environment_conditions = self.rule_map.get(action_key, {}).get("environment_conditions", [])
+            for environment_condition in environment_conditions:
+                state_type = environment_condition.get("state_type")
+                field = environment_condition.get("field")
+                operator = environment_condition.get("operator")
+                right_value = environment_condition.get("right")
+                mysql = MySQL()
+                current_value = mysql.get_env_state(state_type, self.room, field)
+                if current_value is None:
+                    # 如果无法获取当前值，则跳过此条件检查
+                    continue
+                if operator == ">":
+                    if not (float(current_value) > float(right_value)):
+                        actions_to_remove.append(action)
+                        break
+                elif operator == "<":
+                    if not (float(current_value) < float(right_value)):
+                        actions_to_remove.append(action)
+                        break
+                elif operator == ">=":
+                    if not (float(current_value) >= float(right_value)):
+                        actions_to_remove.append(action)
+                        break
+                elif operator == "<=":
+                    if not (float(current_value) <= float(right_value)):
+                        actions_to_remove.append(action)
+                        break
+                elif operator == "=":
+                    if not (float(current_value) == float(right_value)):
+                        actions_to_remove.append(action)
+                        break
+                elif operator == "!=":
+                    if not (float(current_value) != float(right_value)):
+                        actions_to_remove.append(action)
+                        break
+        # 从 actions 中移除不满足条件的动作
+        self.actions = [action for action in self.actions if action not in actions_to_remove]
+
     def build_dependency(self, device_action: DeviceAction):
+        """
+        递归构建执行动作拓扑图
+        """
         device_action_str = device_action.model_dump_json()
         # 如果已经存在，说明已经构建过
         if device_action_str in self.graph:
             return
         action_key = (device_action.device_type, device_action.action_name)
-        pre_conditions = self.rule_map[action_key].get("pre_conditions", [])
+        device_conditions = self.rule_map[action_key].get("device_conditions", [])
         # 前置条件为空，说明没有依赖
-        if not pre_conditions:
+        if not device_conditions:
             self.graph[device_action_str] = []
             self.indegree[device_action_str] = 0
             return
         else:
             # 检查前置条件是否满足
             flag = True
-            for pre_condition in pre_conditions:
-                condition = pre_condition.get("condition")
+            for device_condition in device_conditions:
+                condition = device_condition.get("condition")
                 device_type = condition.get("device_type")
                 field = condition.get("field")
                 target_value = condition.get("target")
@@ -66,7 +121,7 @@ class Ruler:
                 # 如果不满足则加入
                 elif str(current_value) != str(target_value):
                     flag = False
-                    action_dict = pre_condition.get("action")
+                    action_dict = device_condition.get("action")
                     device_type = action_dict.get("device_type")
                     action_name = action_dict.get("action_name")
                     pre_action = DeviceAction(device_type=device_type, action_name=action_name)
@@ -80,12 +135,7 @@ class Ruler:
 
     def execute_plan(self) -> tuple[str, list]:
         """
-        Execute the built plan.
-
-        Returns:
-            (status, exec_log)
-            - status: 'success' or a failure reason string
-            - exec_log: list of step logs
+        多线程执行执行动作拓扑图
         """
         while True:
             zero_indegree_keys = [key for key, degree in self.indegree.items() if degree == 0]
@@ -108,6 +158,9 @@ class Ruler:
         return "success", list(self.exec_log)
                 
     def execute_action(self, key: str, results: list):
+        """
+        执行设备动作
+        """
         device_action = DeviceAction.model_validate_json(key)
         device_type = device_action.device_type
         action_name = device_action.action_name
@@ -179,6 +232,9 @@ class Ruler:
         return
     
     def update_graph_and_indegree(self, key: str):
+        """
+        更新 graph 和 indegree
+        """
         with self.lock:
             # 从 indegree 和 graph 中删除
             if key in self.graph:

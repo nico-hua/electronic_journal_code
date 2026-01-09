@@ -1,0 +1,134 @@
+[
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "current_time",
+        "op": "=",
+        "right": "16:50"
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "current_time",
+        "op": "=",
+        "right": "16:58"
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "current_time",
+        "op": ">",
+        "right": "16:58"
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "current_time",
+        "op": ">",
+        "right": "16:56"
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "livingroom.temperature",
+        "op": ">",
+        "right": 38
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "type": "tap",
+    "conditions": [
+      {
+        "left": "livingroom.temperature",
+        "op": ">",
+        "right": 40
+      }
+    ],
+    "plan": [
+      {
+        "room_name": "livingroom",
+        "actions": [
+          {
+            "device_type": "air_conditioner",
+            "action_name": "turn_on",
+            "parameters": null
+          }
+        ]
+      }
+    ]
+  }
+]

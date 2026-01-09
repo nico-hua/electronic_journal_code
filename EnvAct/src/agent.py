@@ -2,8 +2,9 @@ from langchain_core.language_models import BaseChatModel
 import time
 import json
 from typing import Any, Dict, List, Optional
-from src.planner import Planner, RoomPlan, PlannerResponse, PlannerRunResult
-from src.ruler import Ruler
+from .planner import Planner, RoomPlan, PlannerResponse, PlannerRunResult
+from .ruler import Ruler
+from .tap_plan_manager import TapPlanManager
 import threading
 
 class Agent:
@@ -12,6 +13,7 @@ class Agent:
         self.user_location = user_location
         self.llm = llm
         self.planner = Planner(user_location, llm)
+        self.tap_manager = TapPlanManager()
 
     def _process_room_plan(self, room_plan: RoomPlan, results: List[Dict[str, Any]]):
         """Build constrained plan and execute for one room (thread worker)."""
@@ -117,6 +119,10 @@ class Agent:
                     break
                 if not plan_res.plan:
                     print("规划器未返回可执行计划。\n")
+                    break
+                if plan_res.plan.type == "tap":
+                    self.tap_manager.add_plan(plan_res.plan)
+                    print("TAP plan added and will be executed when conditions are met.")
                     break
                 last_plan = plan_res.plan
                 # Execute (multi-room in parallel)

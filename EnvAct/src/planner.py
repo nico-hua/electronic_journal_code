@@ -31,7 +31,7 @@ class DeviceAction(BaseModel):
 
 class RoomPlan(BaseModel):
     room_name: str = Field(
-        description="Name of the room where the actions will be executed, e.g., living_room, bedroom."
+        description="Name of the room where the actions will be executed, e.g., livingroom, bedroom."
     )
     actions: List[DeviceAction] = Field(
         description="List of actions to be applied to devices within this room."
@@ -49,8 +49,8 @@ class Condition(BaseModel):
     left: str = Field(
         description="Left operand. e.g., 'livingroom.temperature', 'context.temperature', 'current_time'."
     )
-    op: Literal[">", "<", "=", "!="] = Field(
-        description="Operator for the condition: one of '>', '<', '=', '!='."
+    op: Literal[">", "<", "=", "!=", ">=", "<="] = Field(
+        description="Operator for the condition: one of '>', '<', '=', '!=', '>=', '<='."
     )
     right: Union[int, float, str, bool] = Field(
         description="Right operand. Usually a number for env values, or string/bool if needed."
@@ -72,6 +72,16 @@ class PlannerResponse(BaseModel):
     plan: List[RoomPlan] = Field(
         description="Overall execution plan, grouped by rooms and the corresponding device actions."
     )
+
+    def to_dict(self):
+        """
+        Convert PlannerResponse to a dictionary that can be serialized into JSON.
+        """
+        return {
+            "type": self.type,
+            "conditions": [condition.model_dump() for condition in self.conditions],  # Convert each Condition to a dict
+            "plan": [room_plan.model_dump() for room_plan in self.plan]  # Convert each RoomPlan to a dict
+        }
 
 class PlannerRunResult(BaseModel):
     """
@@ -147,7 +157,7 @@ Classify as "instant" when the instruction is a direct imperative without waitin
 When type="tap":
 - PlannerResponse.conditions MUST be a non-empty list.
 - Each condition MUST be structured as: {{left, op, right}}
-- Supported ops: >, <, =, !=
+- Supported ops: >, <, =, !=, >=, <=
 - Multiple conditions follow AND semantics (ALL must be true).
 Recommended left operand patterns:
 1) Room environment: "<room>.<metric>"
@@ -171,8 +181,11 @@ Use reply_user only when no safe, reasonable, and supported plan exists.
   - If the instruction implies global action (e.g., “暴风雨把所有窗户关上”), target all rooms and call get_room_info for all rooms.
   - Otherwise default to user's current room.
 ### E) Always call get_room_info first
+**Always** start by calling `get_room_info` to gather the status of the devices and environment for the room(s) before any further actions are taken. 
+This is critical when the user's instruction involves device or environmental changes that depend on current room conditions.
+### F) Always call get_room_info first
 Once target room(s) are determined, always call get_room_info to fetch current environment & device status BEFORE finishing a plan.
-### F) Device state checks
+### G) Device state checks
 Skip actions that are already in the desired state (e.g., light already on).
 
 ## Response Format (STRICT)

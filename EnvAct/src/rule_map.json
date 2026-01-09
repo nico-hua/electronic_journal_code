@@ -1,6 +1,7 @@
 {
     "air_conditioner, set_temperature": {
-        "pre_conditions": [
+        "environment_conditions": [],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "air_conditioner",
@@ -21,7 +22,8 @@
         }
     },
     "air_conditioner, set_speed": {
-        "pre_conditions": [
+        "environment_conditions": [],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "air_conditioner",
@@ -42,7 +44,15 @@
         }
     },
     "air_conditioner, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+            {
+                "state_type": "temperature",
+                "field": "temperature",
+                "operator": ">",
+                "right": 30
+            }
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "window",
@@ -85,7 +95,15 @@
         }
     },
     "heater, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+            {
+                "state_type": "temperature",
+                "field": "temperature",
+                "operator": "<",
+                "right": 10
+            }
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "window",
@@ -106,7 +124,9 @@
         }
     },
     "window, close": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "window",
@@ -115,7 +135,9 @@
         }
     },
     "window, open": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "window",
@@ -124,7 +146,9 @@
         }
     },
     "door, open": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "door",
@@ -133,7 +157,9 @@
         }
     },
     "door, close": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "door",
@@ -142,7 +168,9 @@
         }
     },
     "fan, set_speed": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "fan",
@@ -163,7 +191,9 @@
         }
     },
     "fan, turn_off": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "fan",
@@ -172,7 +202,9 @@
         }
     },
     "fan, turn_on": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "fan",
@@ -181,7 +213,9 @@
         }
     },
     "curtain, open": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "curtain",
@@ -190,7 +224,9 @@
         }
     },
     "light, turn_off": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "light",
@@ -199,7 +235,9 @@
         }
     },
     "light, turn_on": {
-        "pre_conditions": [],
+        "environment_conditions": [
+        ],
+        "device_conditions": [],
         "validation": {
             "latency": 0.1,
             "device_type": "light",
@@ -208,14 +246,16 @@
         }
     },
     "humidifier, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
-                "condition": {
+                "device_condition": {
                     "device_type": "window",
                     "field": "status",
                     "target": "CLOSED"
                 },
-                "action": {
+                "device_action": {
                     "device_type": "window",
                     "action_name": "close"
                 }
@@ -229,7 +269,9 @@
         }
     },
     "humidifier, turn_off": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -239,14 +281,16 @@
         }
     },
     "air_purifier, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
-                "condition": {
+                "device_condition": {
                     "device_type": "window",
                     "field": "status",
                     "target": "CLOSED"
                 },
-                "action": {
+                "device_action": {
                     "device_type": "window",
                     "action_name": "close"
                 }
@@ -260,7 +304,9 @@
         }
     },
     "air_purifier, turn_off": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -270,7 +316,15 @@
         }
     },
     "cooker_hood, set_speed": {
-        "pre_conditions": [
+        "environment_conditions": [
+            {
+                "state_type": "co_level",
+                "field": "co__level",
+                "operator": "<",
+                "right": 200
+            }
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "cooker_hood",
@@ -291,18 +345,15 @@
         }
     },
     "cooker_hood, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
             {
-                "condition": {
-                    "device_type": "gas_stove",
-                    "field": "status",
-                    "target": "ON"
-                },
-                "action": {
-                    "device_type": "gas_stove",
-                    "action_name": "turn_on"
-                }
+                "state_type": "co_level",
+                "field": "co_level",
+                "operator": "<",
+                "right": 200
             }
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -312,18 +363,9 @@
         }
     },
     "cooker_hood, turn_off": {
-        "pre_conditions": [
-            {
-                "condition": {
-                    "device_type": "gas_stove",
-                    "field": "status",
-                    "target": "OFF"
-                },
-                "action": {
-                    "device_type": "gas_stove",
-                    "action_name": "turn_off"
-                }
-            }
+        "environment_conditions": [
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -333,7 +375,9 @@
         }
     },
     "gas_stove, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -343,7 +387,9 @@
         }
     },
     "gas_stove, turn_off": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -353,7 +399,9 @@
         }
     },
     "water_heater, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "bath_heater",
@@ -374,7 +422,9 @@
         }
     },
     "bath_heater, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "door",
@@ -395,7 +445,9 @@
         }
     },
     "towel_dryer, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
         ],
         "validation": {
             "latency": 0.1,
@@ -405,7 +457,9 @@
         }
     },
     "television, turn_on": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "curtain",
@@ -426,7 +480,9 @@
         }
     },
     "curtain, close": {
-        "pre_conditions": [
+        "environment_conditions": [
+        ],
+        "device_conditions": [
             {
                 "condition": {
                     "device_type": "window",

@@ -228,8 +228,19 @@ class MySQL:
         except Exception as e:
             print(f"Error getting status for {device_type} in {room}: {e}")
             return None
+        
+    def get_env_state(self, state_type: str, room: str, field: str):
+        try:
+            with self.state_client.cursor() as cursor:
+                cursor.execute(f"SELECT {field} FROM {state_type} WHERE location=%s", (room,))
+                result = cursor.fetchone()
+                if result is None:
+                    return None
+                return result[field]
+        except Exception as e:
+            print(f"Error getting status for {state_type} in {room}: {e}")
+            return None
             
-    
     def close_client(self):
         """ 关闭数据库连接 """
         self.device_client.close()
